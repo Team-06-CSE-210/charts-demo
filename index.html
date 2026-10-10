@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vanilla charts demo</title>
+  <style>
+    body { margin: 0; background: #f4f6f8; color: #172033; font: 16px/1.6 system-ui, sans-serif; }
+    main { max-width: 1000px; margin: 48px auto; padding: 0 20px; }
+    h1 { margin-bottom: 8px; } p { color: #475569; }
+    .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 20px; }
+    .chart { background: white; border: 1px solid #dce2e9; border-radius: 12px; padding: 12px; min-width: 0; }
+    button { font: inherit; padding: 8px 16px; background: #172033; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #334155; }
+    button:active { background: #0f172a; }
+    input, button { min-height: 44px; box-sizing: border-box; }
+    input:focus-visible, button:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+    fieldset { margin: 20px 0; padding: 0; border: 0; }
+    legend { padding: 0; font-weight: 600; }
+    .coordinate-fields { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+    .coordinate-fields label { display: flex; flex: 1 1 150px; flex-direction: column; gap: 4px; }
+    input { width: 100%; font: inherit; padding: 8px 12px; color: #172033; background: white; border: 1px solid #64748b; border-radius: 6px; }
+    .hint { margin: 4px 0 12px; font-size: 14px; }
+    #coordinate-error { color: #b91c1c; margin: 8px 0 0; }
+    pre { overflow: auto; padding: 20px; background: #e8edf3; border-radius: 8px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Vanilla charts</h1>
+    <p>Two chart types, plain JavaScript, and SVG. Resize the window to see the charts adapt.</p>
+    <div class="charts"><div class="chart" id="scatter"></div><div class="chart" id="line"></div></div>
+    <form id="coordinates">
+      <fieldset aria-describedby="coordinate-help">
+        <legend>Add coordinates</legend>
+        <p class="hint" id="coordinate-help">Add a point to both charts. The line connects points in the order you add them.</p>
+        <div class="coordinate-fields">
+          <label for="coordinate-x">X coordinate<input id="coordinate-x" name="x" type="number" step="any" required></label>
+          <label for="coordinate-y">Y coordinate<input id="coordinate-y" name="y" type="number" step="any" required></label>
+          <button type="submit">Add point</button>
+        </div>
+        <p id="coordinate-error" role="alert" hidden></p>
+      </fieldset>
+    </form>
+    <p><button id="update" type="button">Switch data</button> <span id="status" aria-live="polite">Showing sample A.</span></p>
+    <pre><code>const chart = new VanillaCharts.Chart('#scatter', {
+  type: 'scatter',
+  data: [[0, 2], [1, 4], [2, 3]],
+  xLabel: 'Time',
+  yLabel: 'Value'
+});
+
+chart.update([[0, 3], [1, 5], [2, 4]]);
+chart.destroy();</code></pre>
+  </main>
+  <script src="charts.js"></script>
+  <script>
+    const samples = [
+      [[-2, 3], [-1, 1], [0, 2], [1, 5], [2, 4], [3, 7]],
+      [[-2, 6], [-1, 4], [0, 5], [1, 2], [2, 3], [3, 1]]
+    ];
+    const scatter = new VanillaCharts.Chart('#scatter', { type: 'scatter', data: samples[0], title: 'Scatter plot', xLabel: 'X coordinate', yLabel: 'Y coordinate' });
+    const line = new VanillaCharts.Chart('#line', { type: 'line', data: samples[0], title: 'Line chart', color: '#0f766e', xLabel: 'X coordinate', yLabel: 'Y coordinate' });
+    let sample = 0;
+    const form = document.querySelector('#coordinates');
+    const xInput = document.querySelector('#coordinate-x');
+    const yInput = document.querySelector('#coordinate-y');
+    const error = document.querySelector('#coordinate-error');
+    form.addEventListener('input', () => { error.hidden = true; });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const x = xInput.valueAsNumber;
+      const y = yInput.valueAsNumber;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        error.textContent = 'Enter a valid number for both coordinates.';
+        error.hidden = false;
+        return;
+      }
+      const data = [...scatter.data, { x, y }];
+      try {
+        scatter.update(data);
+        line.update(data);
+      } catch (failure) {
+        error.textContent = 'These coordinates are too large to plot. Try smaller values.';
+        error.hidden = false;
+        return;
+      }
+      error.hidden = true;
+      document.querySelector('#status').textContent = `Added (${x}, ${y}). Showing ${data.length} points.`;
+      form.reset();
+      xInput.focus();
+    });
+    document.querySelector('#update').addEventListener('click', () => {
+      sample = 1 - sample;
+      scatter.update(samples[sample]);
+      line.update(samples[sample]);
+      error.hidden = true;
+      document.querySelector('#status').textContent = `Showing sample ${sample ? 'B' : 'A'}.`;
+    });
+  </script>
+</body>
+</html>
